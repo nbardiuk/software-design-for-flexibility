@@ -1,3 +1,7 @@
 .PHONY: repl
 repl:
-	 nix-shell -p mitscheme --command "mit-scheme --load user.scm"
+	 ${MAKE} user.scm
+
+.PHONY: *.scm
+*.scm:
+	 nix-shell -p mitscheme --command "mit-scheme --load $@"
