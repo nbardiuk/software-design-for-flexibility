@@ -96,4 +96,68 @@
                  (lambda (u v w) (values u v w)))
  'a 'b 'c 'd 'e)
 
+; A small library
+
+(define (discard-argument i)
+  (assert (exact-nonnegative-integer? i))
+  (lambda (f)
+    (let ((m (+ (get-arity f) 1)))
+      (define (the-combination . args)
+        (assert (= (length args) m))
+        (apply f (list-remove args i)))
+      (assert (< i m))
+      (restrict-arity the-combination m))))
+
+(define (list-remove lst index)
+  (let loop ((lst lst)
+             (index index))
+    (if (= index 0)
+      (cdr lst)
+      (cons (car lst) (loop (cdr lst) (- index 1))))))
+
+(((discard-argument 2)
+  (lambda (x y z) (list 'foo x y z)))
+ 'a 'b 'c 'd)
+
+
+(define ((curry-argument i) . args)
+  (lambda (f)
+    (assert (= (length args) (- (get-arity f) 1)))
+    (lambda (x)
+      (apply f (list-insert args i x)))))
+
+(define (list-insert lst index value)
+  (let loop ((lst lst)
+             (index index))
+    (if (= index 0)
+      (cons value lst)
+      (cons (car lst) (loop (cdr lst) (- index 1))))))
+
+;; clojure's #(f 'a 'b % 'c) ~= (((curry-argument 2) 'a 'b 'c) f)
+
+((((curry-argument 2) 'a 'b 'c)
+  (lambda (x y z w) (list 'foo x y z w)))
+ 'd)
+
+
+(define (permute-arguments . permspec)
+  (let ((permute (make-permutation permspec)))
+    (lambda (f)
+      (define (the-combination . args)
+        (apply f (permute args)))
+      (let ((n (get-arity f)))
+        (assert (= n (length permspec)))
+        (restrict-arity the-combination n)))))
+
+(define (make-permutation permspec)
+  (define (the-permuter lst)
+    (map (lambda (p) (list-ref lst p)) permspec))
+  the-permuter)
+
+(((permute-arguments 1 2 0 3)
+  (lambda (x y z w) (list 'foo x y z w)))
+ 'a 'b 'd 'd)
+
+; 2.1.2 Combinators and body plans
+
 #; (restart 1)
