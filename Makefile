@@ -4,4 +4,4 @@ repl:
 
 .PHONY: *.scm
 *.scm:
-	 nix-shell -p mitscheme --command "mit-scheme --load $@"
+	 nix-shell -p mitscheme -p rlwrap --command "rlwrap -c mit-scheme --load $@"
