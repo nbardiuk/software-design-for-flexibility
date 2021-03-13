@@ -156,33 +156,51 @@
     list
     (lambda (u v w) (list 'bar u v w))))
 
-(define (sum-arities a b)
-  (let ((min-arity (+ (procedure-arity-min a)
-                      (procedure-arity-min b)))
-        (max-arity (and (procedure-arity-max a)
-                        (procedure-arity-max b)
-                        (+ (procedure-arity-max a)
-                           (procedure-arity-max b)))))
-    (make-procedure-arity min-arity max-arity)))
-
 (define (spread-combine h f g)
+
+  (define (fixed-arity? a)
+    (eq? (procedure-arity-min a)
+         (procedure-arity-max a)))
+
+  (define (join-arities a b)
+    (let ((min-arity (+ (procedure-arity-min a)
+                        (procedure-arity-min b)))
+          (max-arity (and (procedure-arity-max b)
+                          (+ (procedure-arity-min a)
+                             (procedure-arity-max b)))))
+      (make-procedure-arity min-arity max-arity)))
+
+  (define (in-arity? a n)
+    (let ((min-arity (procedure-arity-min a))
+          (max-arity (procedure-arity-max a)))
+      (and (<= min-arity n) (or (not max-arity) (<= n max-arity)))))
+
+  (guarantee-procedure-of-arity h (make-procedure-arity 2) 'h)
+  (assert (fixed-arity? (get-arity f)))
+
   (let ((n (procedure-arity-min (get-arity f)))
-        (m (procedure-arity-min (get-arity g)))
-        (common-arity (sum-arities (get-arity f) (get-arity g))))
-    (guarantee-procedure-of-arity h (make-procedure-arity 2) 'h)
-    (let ((t (+ n m))) ;; todo there should be some constraint solving here, this prevents a lot of valid applications
-      (define (the-combination . args)
-        (assert (= (length args) t))
-        (h (apply f (list-head args n))
-           (apply g (list-tail args n))))
-      (restrict-arity the-combination common-arity))))
+        (common-arity (join-arities (get-arity f) (get-arity g))))
+    (define (the-combination . args)
+      (assert (in-arity? common-arity (length args)))
+      (h (apply f (list-head args n))
+         (apply g (list-tail args n))))
+    (restrict-arity the-combination common-arity)))
 
 ((spread-combine list
                  (lambda (x y) (list 'foo x y))
                  (lambda (u v w) (list 'bar u v w)))
  'a 'b 'c 'd 'e)
 
-(get-arity (spread-combine list
+((spread-combine list
                  (lambda (x y) (list 'foo x y))
-                 (lambda (u v w) (list 'bar u v w))))
+                 list)
+ 'a 'b 'c 'd 'e 'd)
+
+(get-arity (spread-combine list
+                           (lambda (x y) (list 'foo x y))
+                           (lambda (u v w) (list 'bar u v w))))
+
+; Multiple Values
+
+
 ;; (RESTART 1)
