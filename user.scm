@@ -59,5 +59,41 @@
 
 ; Multiple Values
 
+(define (spread-apply f g)
+  (let ((n (get-arity f)) (m (get-arity g)))
+    (let ((t (+ n m)))
+      (define (the-combination . args)
+        (assert (= (length args) t))
+        (values (apply f (list-head args n))
+                (apply g (list-tail args n))))
+      (restrit-arity the-combination t))))
 
-#; (RESTART 1)
+(define (spread-combine h f g)
+  (compose h (spread-apply f g)))
+
+(define (compose f g)
+  (define (the-composition . args)
+    (call-with-values (lambda () (apply g args)) f))
+  (restrict-arity the-composition (get-arity g)))
+
+((compose (lambda (a b) (list 'foo a b))
+          (lambda (x) (values (list 'bar x)
+                              (list 'baz x))))
+ 'z)
+
+(define (spread-apply f g)
+  (let ((n (get-arity f)) (m (get-arity g)))
+    (let ((t (+ n m)))
+      (define (the-combination . args)
+        (assert (= (length args) t))
+        (let-values ((fv (apply f (list-head args n)))
+                     (gv (apply g (list-tail args n))))
+          (apply values (append fv gv))))
+      (restrict-arity the-combination t))))
+
+((spread-combine list
+                 (lambda (x y) (values x y))
+                 (lambda (u v w) (values u v w)))
+ 'a 'b 'c 'd 'e)
+
+#; (restart 1)
