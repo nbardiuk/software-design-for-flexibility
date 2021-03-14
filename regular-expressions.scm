@@ -27,11 +27,11 @@
 (define (r:repeat min max expr)
   (apply
     r:seq
-    (append (make-list min expr)
-            (cond
-              ((not max) (list expr "*"))
-              ((= max min) '())
-              (else (make-list (- max min) (r:alt expr "")))))))
+    (append (list expr "\\{" (number->string min))
+            (cond ((and max (= min max)) '())
+                  (max (list "," (number->string max)))
+                  (else (list ",")))
+            (list "\\}"))))
 
 (define (r:* expr) (r:repeat 0 #f expr))
 (define (r:+ expr) (r:repeat 1 #f expr))
@@ -99,13 +99,30 @@
           (r:alt (r:quote "foo") (r:quote "bar") (r:quote "baz"))))
 
 (assert (equal?
-          "\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\(\\(cat\\)\\\|\\(dog\\)\\)\\(\\(cat\\)\\\|\\(dog\\)\\)\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\\|\\)\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\\|\\)\\)"
+          "\\(\\(a\\)\\{3,\\}\\)"
+          (r:repeat 3 #f (r:quote "a"))))
+
+(assert (equal?
+          "\\(\\(a\\)\\{3,5\\}\\)"
+          (r:repeat 3 5 (r:quote "a"))))
+
+(assert (equal?
+          "\\(\\(a\\)\\{3\\}\\)"
+          (r:repeat 3 3 (r:quote "a"))))
+
+(assert (equal?
+          "\\(\\(a\\)\\{0,1\\}\\)"
+          (r:repeat 0 1 (r:quote "a"))))
+
+(assert (equal?
+          "\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\{3,5\\}\\)"
           (r:repeat 3 5 (r:alt (r:quote "cat") (r:quote "dog")))))
 
 (assert (equal?
-          "\\(\\(a\\)*\\)"
+          "\\(\\(a\\)\\{0,\\}\\)"
           (r:* (r:quote "a"))))
 
 (assert (equal?
-          "\\(\\(a\\)\\(a\\)*\\)"
+          "\\(\\(a\\)\\{1,\\}\\)"
           (r:+ (r:quote "a"))))
+
