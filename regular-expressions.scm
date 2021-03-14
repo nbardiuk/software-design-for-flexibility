@@ -3,7 +3,7 @@
 (define (r:eol) "$")
 
 (define (r:seq . exprs)
-  (string-append "\\(" (apply string-append exprs) "\\)"))
+  (apply string-append exprs))
 
 (define (r:quote string)
   (r:seq
@@ -19,15 +19,15 @@
 
 (define (r:alt . exprs)
   (if (pair? exprs)
-    (apply r:seq (cons (car exprs)
-                       (append-map (lambda (expr) (list "\\|" expr))
-                                   (cdr exprs))))
-    (r:seq)))
+    (apply r:seq (append (list "\\(?:" (car exprs) "\\)")
+                         (append-map (lambda (expr) (list "\\|\\(?:" expr "\\)"))
+                                     (cdr exprs))))
+    "\\(?:\\)"))
 
 (define (r:repeat min max expr)
   (apply
     r:seq
-    (append (list expr "\\{" (number->string min))
+    (append (list "\\(?:" expr "\\)\\{" (number->string min))
             (cond ((and max (= min max)) '())
                   (max (list "," (number->string max)))
                   (else (list ",")))
@@ -38,7 +38,7 @@
 
 (define (r:char-from string)
   (case (string-length string)
-    ((0) (r:seq))
+    ((0) "\\(?:\\)")
     ((1) (r:quite string))
     (else (bracket string
                    (lambda (members)
@@ -91,38 +91,37 @@
             (list #\'))))
 
 (assert (equal?
-          "\\(\\(a\\).\\(c\\)\\)"
+          "a.c"
           (r:seq (r:quote "a") (r:dot) (r:quote "c"))))
 
 (assert (equal?
-          "\\(\\(foo\\)\\\|\\(bar\\)\\\|\\(baz\\)\\)"
+          "\\(?:foo\\)\\\|\\(?:bar\\)\\\|\\(?:baz\\)"
           (r:alt (r:quote "foo") (r:quote "bar") (r:quote "baz"))))
 
 (assert (equal?
-          "\\(\\(a\\)\\{3,\\}\\)"
+          "\\(?:a\\)\\{3,\\}"
           (r:repeat 3 #f (r:quote "a"))))
 
 (assert (equal?
-          "\\(\\(a\\)\\{3,5\\}\\)"
+          "\\(?:a\\)\\{3,5\\}"
           (r:repeat 3 5 (r:quote "a"))))
 
 (assert (equal?
-          "\\(\\(a\\)\\{3\\}\\)"
+          "\\\(?:a\\)\\{3\\}"
           (r:repeat 3 3 (r:quote "a"))))
 
 (assert (equal?
-          "\\(\\(a\\)\\{0,1\\}\\)"
+          "\\(?:a\\)\\{0,1\\}"
           (r:repeat 0 1 (r:quote "a"))))
 
 (assert (equal?
-          "\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\{3,5\\}\\)"
+          "\\(?:\\(?:cat\\)\\\|\\(?:dog\\)\\)\\{3,5\\}"
           (r:repeat 3 5 (r:alt (r:quote "cat") (r:quote "dog")))))
 
 (assert (equal?
-          "\\(\\(a\\)\\{0,\\}\\)"
+          "\\(?:a\\)\\{0,\\}"
           (r:* (r:quote "a"))))
 
 (assert (equal?
-          "\\(\\(a\\)\\{1,\\}\\)"
+          "\\(?:a\\)\\{1,\\}"
           (r:+ (r:quote "a"))))
-
