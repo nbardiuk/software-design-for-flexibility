@@ -33,6 +33,9 @@
               ((= max min) '())
               (else (make-list (- max min) (r:alt expr "")))))))
 
+(define (r:* expr) (r:repeat 0 #f expr))
+(define (r:+ expr) (r:repeat 1 #f expr))
+
 (define (r:char-from string)
   (case (string-length string)
     ((0) (r:seq))
@@ -68,8 +71,6 @@
 
 (define chars-needing-quoting-in-brackets '(#\] #\^ #\-))
 
-
-
 (define (write-bourne-shell-grep-command expr filename)
   (display (bourne-shell-grep-command-string expr filename)))
 
@@ -100,3 +101,11 @@
 (assert (equal?
           "\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\(\\(cat\\)\\\|\\(dog\\)\\)\\(\\(cat\\)\\\|\\(dog\\)\\)\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\\|\\)\\(\\(\\(cat\\)\\\|\\(dog\\)\\)\\\|\\)\\)"
           (r:repeat 3 5 (r:alt (r:quote "cat") (r:quote "dog")))))
+
+(assert (equal?
+          "\\(\\(a\\)*\\)"
+          (r:* (r:quote "a"))))
+
+(assert (equal?
+          "\\(\\(a\\)\\(a\\)*\\)"
+          (r:+ (r:quote "a"))))
