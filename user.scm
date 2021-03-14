@@ -134,7 +134,6 @@
       (cons (car lst) (loop (cdr lst) (- index 1))))))
 
 ;; clojure's #(f 'a 'b % 'c) ~= (((curry-argument 2) 'a 'b 'c) f)
-
 ((((curry-argument 2) 'a 'b 'c)
   (lambda (x y z w) (list 'foo x y z w)))
  'd)
@@ -154,10 +153,31 @@
     (map (lambda (p) (list-ref lst p)) permspec))
   the-permuter)
 
+;; clojure's #(f %2 %3 %1 %4) ~= ((permute-arguments 1 2 0 3) f)
 (((permute-arguments 1 2 0 3)
   (lambda (x y z w) (list 'foo x y z w)))
- 'a 'b 'd 'd)
+ 'a 'b 'c 'd)
 
-; 2.1.2 Combinators and body plans
+; exercise 2.5 Useful combinators
+
+(define (compose . procs)
+  (cond
+    ((null? procs) identity)
+    ((null? (cdr procs)) (car procs))
+    (else (let ((f (car procs))
+                (g (apply compose (cdr procs))))
+            (define (the-composition . args)
+              (call-with-values (lambda () (apply g args)) f))
+            (restrict-arity the-composition (get-arity g))))))
+
+((compose) 'z)
+
+((compose (lambda (a b) (list 'foo a b))) 'z 'w)
+
+((compose list
+          (lambda (a b) (list 'foo a b))
+          (lambda (x) (values (list 'bar x)
+                              (list 'baz x))))
+ 'z)
 
 #; (restart 1)
